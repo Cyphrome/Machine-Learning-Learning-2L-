@@ -1,1 +1,27 @@
 Base of Basic.
+
+/Day 1
+
+Energy = "Given the equation mc^2"
+print(Energy)
+Equation = "With:"
+Equation2 = "m0 = 2"
+Equation3 = "v = 1/4"
+print(Equation)
+print(Equation2)
+print(Equation3)
+Ex = "Explain."
+print(Ex)
+Energy2 = "m = ym0"
+A = "E = (ym0c)^2 = (m0c2)^2 + (ym0vc)^2"
+print(Energy2)
+print(A)
+
+Energy3 = '(2c)^2+(y2x1/4c)^2'
+print(Energy3)
+y = "y is a factor in both Energy and Relativistic Momentum"
+y2 = "y is absorbed (implicit)"
+print(y)
+print(y2)
+Energy4 = '(2c)^2 + (2x1/4c)^2'
+print(Energy4)
