@@ -2,7 +2,7 @@
 
 Let's say that i'm just a nobody. I know nothing about coding. I don't know how to operate Java, Python, or C language, i only know that we need code to operate such a complex computing system.
 
-Where do i need to start to learn? How quickly am I going to absorb all the fundamentals about coding?
+Where do i need to start to learn? How quickly am i going to absorb all the fundamentals about coding?
 
 Machine Learning tells me about the idea of a neural network, just like it says, neural, by any means neuron. I understand how the neuron works biologically. This system and coordination we have inside our body is perfectly structured, i can even say: it's beautiful.
 
