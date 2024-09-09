@@ -1,6 +1,7 @@
 Base of Basic.
 
-/Day 1
+/Day 1/
+/Learning basic Python; Mass-Energy equivalence/
 
 Energy = "Given the equation mc^2"
 print(Energy)
