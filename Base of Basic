@@ -26,3 +26,568 @@ print(y)
 print(y2)
 Energy4 = '(2c)^2 + (2x1/4c)^2'
 print(Energy4)
+
+/Day 2/
+/CNN overview, how to interact with input; how to operate and run the code; fixing mistakes.
+
+import math
+import cv2
+import mediapipe as mp
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+
+# inisiasi Mediapipe Hands
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2,
+                       min_detection_confidence=0.5,
+                       min_tracking_confidence=0.5)
+mp_draw = mp.solutions.drawing_utils
+
+
+# euclidean distance dari yg pak dadang
+def calculate_distance(x1, y1, x2, y2):
+    distance = math.sqrt((x2 - x1) * 2 + (y2 - y1) * 2)
+    return distance
+
+
+# fungsi untuk mengaplikasikan regresi polinomial
+def apply_polynomial_regression(x_data, y_data, degree=2):
+    poly = PolynomialFeatures(degree)
+    x_poly = poly.fit_transform(x_data)
+    poly.fit(x_poly, y_data)
+    model = LinearRegression()
+    model.fit(x_poly, y_data)
+    return model, poly
+
+
+# exponential smoothing, meningkatkan stabilisasi
+def exponential_smoothing(new_value, previous_smoothed_value, alpha):
+    if previous_smoothed_value is None:
+        return new_value
+    return alpha * new_value + (1 - alpha) * previous_smoothed_value
+
+
+cap = cv2.VideoCapture(0)
+cap.set(3, 1080)
+cap.set(4, 720)
+
+# Calibrasi data unutk pengukuran jarak
+x = [300, 245, 200, 170, 145, 130, 112, 103, 93, 87, 80, 75, 70, 67, 62, 59, 57]
+y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+coff = np.polyfit(x, y, 2)  # Polynomial coefficients
+
+# penyimpanan data
+x_data = []
+y_data_5_17 = []
+y_data_5_8 = []
+y_data_9_12 = []
+y_data_13_16 = []
+y_data_17_20 = []
+y_data_4_1 = []
+y_data_8_4 = []
+
+# nilai smoothed
+smoothed_5_17 = None
+smoothed_5_8 = None
+smoothed_9_12 = None
+smoothed_13_16 = None
+smoothed_17_20 = None
+smoothed_4_1 = None
+smoothed_8_4 = None
+
+# penyimpanan data untuk kiri
+x_data_kiri = []
+y_data_5_17_kiri = []
+y_data_5_8_kiri = []
+y_data_9_12_kiri = []
+y_data_13_16_kiri = []
+y_data_17_20_kiri = []
+y_data_4_1_kiri = []
+y_data_8_4_kiri = []
+
+# nilai smoothed unutk kiri
+smoothed_5_17_kiri = None
+smoothed_5_8_kiri = None
+smoothed_9_12_kiri = None
+smoothed_13_16_kiri = None
+smoothed_17_20_kiri = None
+smoothed_4_1_kiri = None
+smoothed_8_4_kiri = None
+
+# nilai Smoothing alpha yang dipakai
+alpha = 0.1
+smoothed_distance = None
+smoothed_distance_left = None
+smoothed_distance_right = None
+
+# unutuk pendeteksian
+jari_telunjuk = None
+jari_tengah = None
+jari_manis = None
+jari_kelingking = None
+jari_jempol = None
+landmark_lima_tujuhBelas = None
+landmark_delapan_empat = None
+
+# unutuk pendeteksian
+jari_telunjuk_kiri = None
+jari_tengah_kiri = None
+jari_manis_kiri = None
+jari_kelingking_kiri = None
+jari_jempol_kiri = None
+landmark_lima_tujuhBelas_kiri = None
+landmark_delapan_empat_kiri = None
+
+# unutuk pendeteksian tapi kanan
+jari_telunjuk_kanan = None
+jari_tengah_kanan = None
+jari_manis_kanan = None
+jari_kelingking_kanan = None
+jari_jempol_kanan = None
+landmark_lima_tujuhBelas_kanan = None
+landmark_delapan_empat_kanan = None
+
+# ketika mendeteksi kedua tangan
+left_hand_detected = False
+right_hand_detected = False
+
+while True:
+    isopen, frame = cap.read()
+    frame = cv2.flip(frame, 1)
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = hands.process(img)
+    h, w, c = frame.shape
+
+    #inisilisasi variable sebelum digunakan
+    right_hand = None
+    left_hand = None
+
+    if results.multi_hand_landmarks:
+        detected_hands = results.multi_hand_landmarks
+
+        left_hand_detected = False
+        right_hand_detected = False
+
+        if len(detected_hands) == 2:
+            left_hand_detected = False
+            right_hand_detected = False
+
+            for hand_info, handLms in zip(results.multi_handedness, results.multi_hand_landmarks):
+                hand_label = hand_info.classification[0].label
+                if hand_label == 'Right':
+                    right_hand = handLms  # Landmark untuk tangan kanan
+                elif hand_label == 'Left':
+                    left_hand = handLms
+                    # for hand_index, handLms in enumerate(detected_hands):
+            #     mylmList = []
+            #     for id, lm in enumerate(handLms.landmark):
+            #         px, py = int(lm.x * w), int(lm.y * h)
+            #         mylmList.append([id, px, py])
+            #
+            #     if len(mylmList) > 20:
+            #
+            #         # Identifikasi tangan kiri dan kanan
+            #         hand_type = "Left" if hand_index == 0 else "Right"
+
+                # Jika kedua tangan terdeteksi
+                if right_hand and left_hand:
+                    # Kode untuk tangan kanan
+                    for handLms, hand_side in zip([right_hand, left_hand], ["Right", "Left"]):  # Iterasi untuk masing-masing tangan
+                        mylmList = []
+                        for id, lm in enumerate(handLms.landmark):
+                            px, py = int(lm.x * w), int(lm.y * h)
+                            mylmList.append([id, px, py])
+
+                        if len(mylmList) > 20:
+
+                            # Kalkulasi jarak landmark 5 dan 17
+                            x1, y1 = mylmList[5][1], mylmList[5][2]
+                            x2, y2 = mylmList[17][1], mylmList[17][2]
+                            distance = int(calculate_distance(x1, y1, x2, y2))
+
+                            # menggunakan regresi polinomial
+                            A, B, C = coff
+                            distanceCM = A * distance ** 2 + B * distance + C
+
+                            # untuk memperhalus saja
+                            smoothed_distance = exponential_smoothing(distanceCM, smoothed_distance, alpha)
+
+                            # menggambar box dengan landmark tangan
+                            min_x = min([lm[1] for lm in mylmList])
+                            max_x = max([lm[1] for lm in mylmList])
+                            min_y = min([lm[2] for lm in mylmList])
+                            max_y = max([lm[2] for lm in mylmList])
+
+                            cv2.rectangle(frame, (min_x, min_y), (max_x, max_y), (255, 0, 255), 3)
+                            cv2.putText(frame, f'{int(smoothed_distance)} cm', (min_x + 5, min_y - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        (0, 0, 255), 2)
+
+                            pengukuran_jarak = f'{int(smoothed_distance)}'
+                            pengukuran_jarak = float(pengukuran_jarak)
+
+                            x_data.append([mylmList[5][1], mylmList[5][2]])
+
+                            y_data_5_17.append(mylmList[17][1])
+                            y_data_5_8.append(mylmList[8][1])
+                            y_data_9_12.append(mylmList[12][1])
+                            y_data_13_16.append(mylmList[16][1])
+                            y_data_17_20.append(mylmList[20][1])
+                            y_data_4_1.append(mylmList[1][1])
+                            y_data_8_4.append(mylmList[8][1])
+
+                            if len(x_data) > 10:
+                                # Pengaplikasian regresi polinomial ke semua pasangan landmark
+                                model_5_17, poly_5_17 = apply_polynomial_regression(np.array(x_data), np.array(y_data_5_17))
+                                model_5_8, poly_5_8 = apply_polynomial_regression(np.array(x_data), np.array(y_data_5_8))
+                                model_9_12, poly_9_12 = apply_polynomial_regression(np.array(x_data), np.array(y_data_9_12))
+                                model_13_16, poly_13_16 = apply_polynomial_regression(np.array(x_data), np.array(y_data_13_16))
+                                model_17_20, poly_17_20 = apply_polynomial_regression(np.array(x_data), np.array(y_data_17_20))
+                                model_4_1, poly_4_1 = apply_polynomial_regression(np.array(x_data), np.array(y_data_4_1))
+                                model_8_4, poly_8_4 = apply_polynomial_regression(np.array(x_data), np.array(y_data_8_4))
+
+                                x_pred = poly_5_17.fit_transform(np.array([[mylmList[5][1], mylmList[5][2]]]))
+                                y_pred_5_17 = model_5_17.predict(x_pred)[0]
+                                y_pred_5_8 = model_5_8.predict(x_pred)[0]
+                                y_pred_9_12 = model_9_12.predict(x_pred)[0]
+                                y_pred_13_16 = model_13_16.predict(x_pred)[0]
+                                y_pred_17_20 = model_17_20.predict(x_pred)[0]
+                                y_pred_4_1 = model_4_1.predict(x_pred)[0]
+                                y_pred_8_4 = model_8_4.predict(x_pred)[0]
+
+                                # Ini yang smoothing
+                                smoothed_5_17 = exponential_smoothing(y_pred_5_17, smoothed_5_17, alpha)
+                                smoothed_5_8 = exponential_smoothing(y_pred_5_8, smoothed_5_8, alpha)
+                                smoothed_9_12 = exponential_smoothing(y_pred_9_12, smoothed_9_12, alpha)
+                                smoothed_13_16 = exponential_smoothing(y_pred_13_16, smoothed_13_16, alpha)
+                                smoothed_17_20 = exponential_smoothing(y_pred_17_20, smoothed_17_20, alpha)
+                                smoothed_4_1 = exponential_smoothing(y_pred_4_1, smoothed_4_1, alpha)
+                                smoothed_8_4 = exponential_smoothing(y_pred_8_4, smoothed_8_4, alpha)
+
+                                distances = [
+                                    calculate_distance(mylmList[5][1], smoothed_5_17, mylmList[8][1], smoothed_5_8),
+                                    calculate_distance(mylmList[9][1], smoothed_9_12, mylmList[12][1], smoothed_9_12),
+                                    calculate_distance(mylmList[13][1], smoothed_13_16, mylmList[16][1], smoothed_13_16),
+                                    calculate_distance(mylmList[17][1], smoothed_17_20, mylmList[20][1], smoothed_17_20),
+                                    calculate_distance(mylmList[4][1], smoothed_4_1, mylmList[1][1], smoothed_4_1),
+                                    calculate_distance(mylmList[8][1], smoothed_8_4, mylmList[8][1], smoothed_8_4)
+                                ]
+
+                                # Visualisasi dan kalkulasi jarak untuk referensi
+                                landmark_pairs = [(5, 17), (5, 8), (9, 12), (13, 16), (17, 20), (4, 1), (8, 4)]
+                                labels = [f'{hand_side}-5-17', f'{hand_side}-telunjuk', f'{hand_side}-tengah', f'{hand_side}-manis',
+                                          f'{hand_side}-kelingking', f'{hand_side}-jempol', f'{hand_side}-8-4']
+
+                                for index, (id1, id2) in enumerate(landmark_pairs):
+                                    x1, y1 = mylmList[id1][1], mylmList[id1][2]
+                                    x2, y2 = mylmList[id2][1], mylmList[id2][2]
+
+                                    ref_x1, ref_y1 = mylmList[0][1], mylmList[0][2]
+                                    ref_x2, ref_y2 = mylmList[9][1], mylmList[9][2]
+                                    ref_distance = calculate_distance(ref_x1, ref_y1, ref_x2, ref_y2)
+
+                                    actual_distance_px = calculate_distance(x1, y1, x2, y2)
+
+                                    if ref_distance > 0:
+                                        normalized_distance_cm = (
+                                                                         actual_distance_px / ref_distance) * 8.5  # bagian ini masih bisa disesuaikan lagi
+                                    else:
+                                        normalized_distance_cm = 0
+
+                                    if labels[index] == f'{hand_side}-telunjuk':
+                                        if hand_side == "Right":
+                                            jari_telunjuk_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            jari_telunjuk_kiri = normalized_distance_cm
+                                    elif labels[index] == f'{hand_side}-tengah':
+                                        if hand_side == "Right":
+                                            jari_tengah_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            jari_tengah_kiri = normalized_distance_cm
+                                    elif labels[index] == f'{hand_side}-manis':
+                                        if hand_side == "Right":
+                                            jari_manis_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            jari_manis_kiri = normalized_distance_cm
+                                    elif labels[index] == f'{hand_side}-kelingking':
+                                        if hand_side == "Right":
+                                            jari_kelingking_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            jari_kelingking_kiri = normalized_distance_cm
+                                    elif labels[index] == f'{hand_side}-jempol':
+                                        if hand_side == "Right":
+                                            jari_jempol_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            jari_jempol_kiri = normalized_distance_cm
+                                    elif labels[index] == f'{hand_side}-5-17':
+                                        if hand_side == "Right":
+                                            landmark_lima_tujuhBelas_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            landmark_lima_tujuhBelas_kiri = normalized_distance_cm
+                                    elif labels[index] == f'{hand_side}-8-4':
+                                        if hand_side == "Right":
+                                            landmark_delapan_empat_kanan = normalized_distance_cm
+                                        elif hand_side == "Left":
+                                            landmark_delapan_empat_kiri = normalized_distance_cm
+
+                                    if hand_side == "Right":
+                                        text_position = (frame.shape[1] - 300, 50 + 30 * index)  # Tampilkan di sisi kanan
+                                    else:
+                                        text_position = (50, 50 + 30 * index)  # Tampilkan di sisi kiri
+
+                                        # Gambar teks, lingkaran, dan garis
+                                    cv2.circle(frame, (x1, y1), 5, (0, 255, 0), -1)
+                                    cv2.circle(frame, (x2, y2), 5, (0, 255, 0), -1)
+                                    cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                                    cv2.putText(frame, f"{labels[index]}: {normalized_distance_cm:.2f} cm",
+                                                text_position, cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                                (225, 225, 255), 2)
+
+                                if( jari_telunjuk_kanan is not None and jari_telunjuk_kiri is not None and jari_tengah_kanan is not None and jari_tengah_kiri is not None and
+                                    jari_manis_kanan is not None and jari_manis_kiri is not None and jari_kelingking_kanan is not None and jari_kelingking_kiri is not None and
+                                    jari_jempol_kanan is not None and jari_jempol_kiri is not None and landmark_lima_tujuhBelas_kanan is not None and landmark_lima_tujuhBelas_kiri is not None
+                                    and landmark_delapan_empat_kanan is not None and landmark_delapan_empat_kiri is not None
+                                    ):
+                                        if(4 < landmark_lima_tujuhBelas_kanan < 6.00 and 9 > jari_telunjuk_kanan > 5.00 and 9 > jari_tengah_kanan > 5.00 and 9 > jari_manis_kanan > 5.00 and 7 > jari_kelingking_kanan >
+                                         4.00 and 3 < jari_jempol_kanan < 7.00 and 10 > landmark_delapan_empat_kanan > 7.00 and 6 < landmark_lima_tujuhBelas_kiri < 9 and 1 < jari_telunjuk_kiri < 4 and 1 < jari_tengah_kiri < 4
+                                            and 1 < jari_manis_kiri < 4 and 1 < jari_kelingking_kiri < 4 and 4 < jari_jempol_kiri < 8 and 0 < landmark_delapan_empat_kiri < 4):
+                                            cv2.putText(frame, "hello", (frame.shape[1] - 500, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                                        if (10 < landmark_lima_tujuhBelas_kanan < 30.00 and 10 < jari_telunjuk_kanan < 30.00 and 10 < jari_tengah_kanan < 30.00 and 10 < jari_manis_kanan < 30.00 and 10 < jari_kelingking_kanan <
+                                            30.00 and 8 < jari_jempol_kanan < 20.00 and 0 < landmark_delapan_empat_kanan < 10.00 and 6 < landmark_lima_tujuhBelas_kiri < 9 and 1 < jari_telunjuk_kiri < 4 and 1 < jari_tengah_kiri < 4
+                                            and 1 < jari_manis_kiri < 4 and 1 < jari_kelingking_kiri < 4 and 4 < jari_jempol_kiri < 8 and 0 < landmark_delapan_empat_kiri < 4):
+                                                cv2.putText(frame, "apa?", (frame.shape[1] - 500, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                                        (0, 0, 255), 3)
+                                        if (5 < landmark_lima_tujuhBelas_kanan < 11.00 and 3 < jari_telunjuk_kanan < 7.00 and 3 < jari_tengah_kanan < 7.00 and 2 < jari_manis_kanan < 6.00 and 0.00 < jari_kelingking_kanan <
+                                            5.00 and 5 < jari_jempol_kanan < 11.00 and 2 < landmark_delapan_empat_kanan < 8.00 and 6 < landmark_lima_tujuhBelas_kiri < 9 and 1 < jari_telunjuk_kiri < 4 and 1 < jari_tengah_kiri < 4
+                                            and 1 < jari_manis_kiri < 4 and 1 < jari_kelingking_kiri < 4 and 4 < jari_jempol_kiri < 8 and 0 < landmark_delapan_empat_kiri < 4):
+                                                cv2.putText(frame, "siapa?", (frame.shape[1] - 500, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                                        (0, 0, 255), 3)
+                                        if (2 < landmark_lima_tujuhBelas_kiri < 7.00 and 1 < landmark_lima_tujuhBelas_kanan < 6 and 6 < jari_telunjuk_kiri < 9.00 and 5 < jari_telunjuk_kanan < 10.00 and 3 < jari_tengah_kiri < 6
+                                                and 3 < jari_tengah_kanan < 8.00 and 3 < jari_manis_kiri < 6.00 and 3 < jari_manis_kanan < 6 and 2 < jari_kelingking_kiri < 5 and 2 < jari_kelingking_kanan <
+                                                5.00 and 4 < jari_jempol_kiri < 9 and 4 < jari_jempol_kanan < 9.00 and 6 < landmark_delapan_empat_kiri < 10 and 8 < landmark_delapan_empat_kanan < 12.00):
+                                                    cv2.putText(frame, "kapan?", (frame.shape[1] - 500, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                                        (0, 0, 255), 3)
+                                        if (10 < landmark_lima_tujuhBelas_kiri < 35.00 and 10 < landmark_lima_tujuhBelas_kanan < 35 and 10 < jari_telunjuk_kiri < 35.00 and 10 < jari_telunjuk_kanan < 35.00 and 10 < jari_tengah_kiri < 35
+                                                and 10 < jari_tengah_kanan < 35.00 and 10 < jari_manis_kiri < 35.00 and 10 < jari_manis_kanan < 35 and 10 < jari_kelingking_kiri < 35 and 10 < jari_kelingking_kanan <
+                                                35.00 and 10 < jari_jempol_kiri < 35 and 10 < jari_jempol_kanan < 35.00 and 0 < landmark_delapan_empat_kiri < 35 and 0 < landmark_delapan_empat_kanan < 35.00):
+                                                    cv2.putText(frame, "bagaimana?", (frame.shape[1] - 500, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                                        (0, 0, 255), 3)
+                                    # cv2.circle(frame, (x1, y1), 5, (0, 255, 0), -1)
+                                    # cv2.circle(frame, (x2, y2), 5, (0, 255, 0), -1)
+                                    # cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                                    # cv2.putText(frame, f"{labels[index]}: {normalized_distance_cm:.2f} cm",
+                                    #             (50, 50 + 30 * index), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    #             (225, 225, 255), 2, )
+
+                                    # cv2.circle(frame, (x1, y1), 5, (255, 0, 0), cv2.FILLED)
+                                    # cv2.circle(frame, (x2, y2), 5, (255, 0, 0), cv2.FILLED)
+                                    # cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                                    #
+                                    # cv2.putText(frame, f'{int(normalized_distance_cm)} cm', (x2 + 10, y2 + 10),
+                                    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+
+
+        if len(detected_hands) == 1:
+            for handLms in results.multi_hand_landmarks:
+                mylmList = []
+                for id, lm in enumerate(handLms.landmark):
+                    px, py = int(lm.x * w), int(lm.y * h)
+                    mylmList.append([id, px, py])
+
+                if len(mylmList) > 20:
+
+                    # Calcukasi jarak landmark 5 dan 17
+                    x1, y1 = mylmList[5][1], mylmList[5][2]
+                    x2, y2 = mylmList[17][1], mylmList[17][2]
+                    distance = int(calculate_distance(x1, y1, x2, y2))
+
+                    # menggunakan regersi polinomial
+                    A, B, C = coff
+                    distanceCM = A * distance ** 2 + B * distance + C
+
+                    # untuk memperhalus saja
+                    smoothed_distance = exponential_smoothing(distanceCM, smoothed_distance, alpha)
+
+                    # menggambar box dengan landmark tangan
+                    min_x = min([lm[1] for lm in mylmList])
+                    max_x = max([lm[1] for lm in mylmList])
+                    min_y = min([lm[2] for lm in mylmList])
+                    max_y = max([lm[2] for lm in mylmList])
+
+                    cv2.rectangle(frame, (min_x, min_y), (max_x, max_y), (255, 0, 255), 3)
+                    cv2.putText(frame, f'{int(smoothed_distance)} cm', (min_x + 5, min_y - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                (0, 0, 255), 2)
+
+                    pengukuran_jarak = f'{int(smoothed_distance)}'
+                    pengukuran_jarak = float(pengukuran_jarak)
+
+                    x_data.append([mylmList[5][1], mylmList[5][2]])
+
+                    y_data_5_17.append(mylmList[17][1])
+                    y_data_5_8.append(mylmList[8][1])
+                    y_data_9_12.append(mylmList[12][1])
+                    y_data_13_16.append(mylmList[16][1])
+                    y_data_17_20.append(mylmList[20][1])
+                    y_data_4_1.append(mylmList[1][1])
+                    y_data_8_4.append(mylmList[8][1])
+
+                    if len(x_data) > 10:
+                        # pengaplikasian regresi polinomial ke semua pasaang landmark
+                        model_5_17, poly_5_17 = apply_polynomial_regression(np.array(x_data), np.array(y_data_5_17))
+                        model_5_8, poly_5_8 = apply_polynomial_regression(np.array(x_data), np.array(y_data_5_8))
+                        model_9_12, poly_9_12 = apply_polynomial_regression(np.array(x_data), np.array(y_data_9_12))
+                        model_13_16, poly_13_16 = apply_polynomial_regression(np.array(x_data), np.array(y_data_13_16))
+                        model_17_20, poly_17_20 = apply_polynomial_regression(np.array(x_data), np.array(y_data_17_20))
+                        model_4_1, poly_4_1 = apply_polynomial_regression(np.array(x_data), np.array(y_data_4_1))
+                        model_8_4, poly_8_4 = apply_polynomial_regression(np.array(x_data), np.array(y_data_8_4))
+
+                        x_pred = poly_5_17.fit_transform(np.array([[mylmList[5][1], mylmList[5][2]]]))
+                        y_pred_5_17 = model_5_17.predict(x_pred)[0]
+                        y_pred_5_8 = model_5_8.predict(x_pred)[0]
+                        y_pred_9_12 = model_9_12.predict(x_pred)[0]
+                        y_pred_13_16 = model_13_16.predict(x_pred)[0]
+                        y_pred_17_20 = model_17_20.predict(x_pred)[0]
+                        y_pred_4_1 = model_4_1.predict(x_pred)[0]
+                        y_pred_8_4 = model_8_4.predict(x_pred)[0]
+
+                        # ini yang smoothing
+                        smoothed_5_17 = exponential_smoothing(y_pred_5_17, smoothed_5_17, alpha)
+                        smoothed_5_8 = exponential_smoothing(y_pred_5_8, smoothed_5_8, alpha)
+                        smoothed_9_12 = exponential_smoothing(y_pred_9_12, smoothed_9_12, alpha)
+                        smoothed_13_16 = exponential_smoothing(y_pred_13_16, smoothed_13_16, alpha)
+                        smoothed_17_20 = exponential_smoothing(y_pred_17_20, smoothed_17_20, alpha)
+                        smoothed_4_1 = exponential_smoothing(y_pred_4_1, smoothed_4_1, alpha)
+                        smoothed_8_4 = exponential_smoothing(y_pred_8_4, smoothed_8_4, alpha)
+
+                        distances = [
+                            calculate_distance(mylmList[5][1], smoothed_5_17, mylmList[8][1], smoothed_5_8),
+                            calculate_distance(mylmList[9][1], smoothed_9_12, mylmList[12][1], smoothed_9_12),
+                            calculate_distance(mylmList[13][1], smoothed_13_16, mylmList[16][1], smoothed_13_16),
+                            calculate_distance(mylmList[17][1], smoothed_17_20, mylmList[20][1], smoothed_17_20),
+                            calculate_distance(mylmList[4][1], smoothed_4_1, mylmList[1][1], smoothed_4_1),
+                            calculate_distance(mylmList[8][1], smoothed_8_4, mylmList[8][1], smoothed_8_4)
+                        ]
+
+                        # visualisasi dan kalkulasi jarakuntuk refferensi (sebenernya cuman untuk menamaan aja sih)
+                        landmark_pairs = [(5, 17), (5, 8), (9, 12), (13, 16), (17, 20), (4, 1), (8, 4)]
+                        labels = ['5-17', 'telunjuk', 'tengah', 'manis', 'kelingking', 'jempol', '8-4']
+
+                        for index, (id1, id2) in enumerate(landmark_pairs):
+                            x1, y1 = mylmList[id1][1], mylmList[id1][2]
+                            x2, y2 = mylmList[id2][1], mylmList[id2][2]
+
+                            ref_x1, ref_y1 = mylmList[0][1], mylmList[0][2]
+                            ref_x2, ref_y2 = mylmList[9][1], mylmList[9][2]
+                            ref_distance = calculate_distance(ref_x1, ref_y1, ref_x2, ref_y2)
+
+                            actual_distance_px = calculate_distance(x1, y1, x2, y2)
+
+                            if ref_distance > 0:
+                                normalized_distance_cm = (
+                                    actual_distance_px / ref_distance) * 8.5  # bagian ini masih bisa di sesaikanlagi sebelumnya nilainya 8
+                            else:
+                                normalized_distance_cm = 0
+
+                            if labels[index] == 'telunjuk':
+                                jari_telunjuk = normalized_distance_cm
+                            elif labels[index] == 'tengah':
+                                jari_tengah = normalized_distance_cm
+                            elif labels[index] == 'manis':
+                                jari_manis = normalized_distance_cm
+                            elif labels[index] == 'kelingking':
+                                jari_kelingking = normalized_distance_cm
+                            elif labels[index] == 'jempol':
+                                jari_jempol = normalized_distance_cm
+                            elif labels[index] == '5-17':
+                                landmark_lima_tujuhBelas = normalized_distance_cm
+                            elif labels[index] == '8-4':
+                                landmark_delapan_empat = normalized_distance_cm
+
+                            cv2.circle(frame, (x1, y1), 5, (0, 255, 0), -1)
+                            cv2.circle(frame, (x2, y2), 5, (0, 255, 0), -1)
+                            cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                            cv2.putText(frame, f"{labels[index]}: {normalized_distance_cm:.2f} cm",
+                                        (50, 50 + 30 * index), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        (225, 225, 255), 2, )
+
+                        if (jari_telunjuk is not None and jari_tengah is not None and jari_manis is not None and
+                                jari_kelingking is not None and jari_jempol is not None and
+                                landmark_lima_tujuhBelas is not None and landmark_delapan_empat is not None):
+
+                            if (
+                                    pengukuran_jarak < 105 and jari_telunjuk < 5.00 and jari_tengah < 5.00 and jari_manis < 5.00 and jari_kelingking < 5.00
+                                    and jari_jempol > 8.00):
+                                cv2.putText(frame, "A", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak < 105 and landmark_lima_tujuhBelas > 4.00 and jari_telunjuk > 5.00 and jari_tengah > 5.00 and jari_manis > 5.00 and jari_kelingking >
+                                    4.00 and jari_jempol < 6.00 and landmark_delapan_empat > 8.00):
+                                cv2.putText(frame, "B", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak < 105 and landmark_delapan_empat > 2.00 and landmark_lima_tujuhBelas < 5.00 < jari_telunjuk and jari_tengah > 5.00 and
+                                    jari_manis > 5.00 and jari_kelingking > 5.00 and jari_jempol > 4.00):
+                                cv2.putText(frame, "C", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak < 105 and landmark_delapan_empat > 8.00 and jari_telunjuk > 6.00 and jari_tengah < 5.00 and jari_manis < 4.00 and jari_kelingking <
+                                    6.00 and jari_jempol < 9.00):
+                                cv2.putText(frame, "D", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak < 105 and landmark_delapan_empat < 11.00 and jari_telunjuk < 5.00 and jari_tengah < 5.00 and jari_manis < 5.00 and jari_kelingking <
+                                    5.00 and jari_jempol < 8.00):
+                                cv2.putText(frame, "E", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak < 105 and landmark_delapan_empat < 3 and landmark_lima_tujuhBelas > 1.00 and jari_kelingking > 4 and
+                                    jari_manis > 3.00 and jari_tengah > 3.00 and jari_telunjuk > 3.00 and 5 < jari_jempol < 10):
+                                cv2.putText(frame, "F", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            # logika pendeteksian bila jarak lebih dari 110 cm
+                            elif (
+                                    pengukuran_jarak > 105 and 5.00 < landmark_lima_tujuhBelas < 9.00 and jari_telunjuk < 5.00 and jari_tengah < 5.00 and jari_manis < 5.00 and jari_kelingking < 5.00
+                                    and 7 < jari_jempol < 13 and landmark_delapan_empat < 8):
+                                cv2.putText(frame, "A", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak > 105 and 3.00 < landmark_lima_tujuhBelas < 8.00 and 4.00 < jari_telunjuk < 9.00 and 5.00 < jari_tengah < 10.00 and 5.00 < jari_manis < 9.00 and 3.00 < jari_kelingking <
+                                    8.00 and 2.00 < jari_jempol < 7.00 and 6.00 < landmark_delapan_empat < 13.00):
+                                cv2.putText(frame, "B", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak > 105 and 0.00 < landmark_lima_tujuhBelas < 8.00 and 4.00 < jari_telunjuk < 8.00 and 4.00 < jari_tengah < 8.00 and 4.00 < jari_manis < 8.00 and 2.00 < jari_kelingking <
+                                    8.00 and 6.00 < jari_jempol < 10.00 and 3.00 < landmark_delapan_empat < 10.00):
+                                cv2.putText(frame, "C", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak > 105 and 4.00 < landmark_lima_tujuhBelas < 9.00 and 6.00 < jari_telunjuk < 10.00 and 0.00 < jari_tengah < 4.00 and 0.00 < jari_manis < 4.00 and 0.00 < jari_kelingking <
+                                    4.00 and 3.00 < jari_jempol < 12.00 and 7.00 < landmark_delapan_empat < 13.00):
+                                cv2.putText(frame, "D", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak > 105 and 3.00 < landmark_lima_tujuhBelas < 7.00 and 0.00 < jari_telunjuk < 5.00 and 1.00 < jari_tengah < 5.00 and 0.00 < jari_manis < 5.00 and 0.00 < jari_kelingking <
+                                    4.00 and .00 < jari_jempol < 7.00 and 3.00 < landmark_delapan_empat < 10.00):
+                                cv2.putText(frame, "E", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            elif (
+                                    pengukuran_jarak > 105 and 0.00 < landmark_lima_tujuhBelas < 6.00 and 3.00 < jari_telunjuk < 7.00 and 4.00 < jari_tengah < 9.00 and 5.00 < jari_manis < 9.00 and 5.00 < jari_kelingking <
+                                    9.00 and 5.00 < jari_jempol < 10.00 and 0.00 < landmark_delapan_empat < 3.00):
+                                cv2.putText(frame, "F", (frame.shape[1] - 100, 50), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                            (0, 0, 255), 3)
+                            # Kosakata
+
+                mp_draw.draw_landmarks(frame, handLms, mp_hands.HAND_CONNECTIONS)
+
+    cv2.imshow("Penghitungan Jarak Antar Landmark", frame)
+
+    if cv2.waitKey(1) & 0xff == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+/Day 3/
