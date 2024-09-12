@@ -1,0 +1,83 @@
+import cv2
+import numpy as np
+import math
+
+from object_tracking.main import detections, boxes_ids
+from tracker import*
+
+#Create tracker object
+tracker = EuclideanDistTracker()
+
+cap = cv2.VideoCapture("Highway.mp4")
+
+#Coba Initialize Count
+count = 0
+center_points_prev_frame = []
+
+tracking_object = {}
+track_id = 0
+
+while True:
+    ret, frame = cap.read()
+    count += 1
+    if not ret:
+        break
+
+
+
+# Object detection from stable camera (persisi)
+object_detector = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=40)
+
+while True:
+    ret, frame = cap.read()
+    height, width, _ = frame.shape
+    #print(height, width)
+    #Extract ROI, point of interest
+    roi = frame[int(height/3):, int(width/2)-200:int(width/2)+200]
+
+    # Object Detection lah ya...
+    mask = object_detector.apply(roi)
+    _, mask = cv2.threshold(mask, 290, 300, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    detections = []
+    for cnt in contours:
+        # Calculate are and remove small element bruh.
+        area = cv2.contourArea(cnt)
+        if area > 500 :
+            #The black and white screen based on:
+            #cv2.drawContours(frame, [cnt], -1, (0, 225, 0), 2)
+            x, y, w, h = cv2.boundingRect(cnt)
+
+            #print(x, y, w, h)
+
+            detections.append([x, y, w, h])
+            print(detections)
+
+    #Object Tracking
+    boxes_ids = tracker.update(detections)
+    #print(boxes_ids)
+    for box_id in boxes_ids:
+        x, y, w, h, id = box_id
+        cv2.putText(roi, str(id), (x, y, - 15), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+        cv2.rectangle(roi, (x, y), (x + w, y + h), (0, 225, 3))
+
+
+    count = len(roi)
+
+
+    print(detections)
+    cv2.imshow("Frame", frame)
+    cv2.imshow("Mask", mask)
+    #Doesn't really work with my file
+    cv2.imshow("roi", roi)
+
+    key = cv2.waitKey(30)
+    if key == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+
+
