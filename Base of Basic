@@ -731,11 +731,15 @@ cv2.destroyAllWindows()
 / Have problem with the camera, doesn't work in MacOS
 
 import cv2
-
+import mediapipe
 import numpy as np
-#from color_recognition(import height, width, pixel_center, hsv_frame)
 
-cap = cv2.VideoCapture(2)
+from color_recognition import hue_value, color, pixel_center_bgr
+
+from color_recognition import height, width, pixel_center, hsv_frame
+
+# Open Cam (Ada masalah open cam di macOS)
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
@@ -749,7 +753,27 @@ while True:
 
     # Pixel in Center
     pixel_center = frame[cy, cx]
-    print(pixel_center)
+    hue_value = pixel_center(0)
+
+    # Color Hue/ Definition
+    color = "Undefined"
+    if hue_value < 5:
+        color = "Red"
+    elif hue_value < 22:
+        color = "Orange"
+    elif hue_value < 33:
+        color = "Yellow"
+    elif hue_value < 78:
+        color = "Green"
+    elif hue_value < 131:
+        color = "Blue"
+    elif hue_value < 170:
+        color = "Violet"
+    else:
+        color = "Red"
+
+    pixel_center_bgr = frame[cy, cx]
+    cv2.putText(frame, color, (10, 50), 0, 1, (255, 0, 0), 2)
     cv2.circle(frame, (cx, cy), 5, (255, 0, 0), 3)
 
 
@@ -761,6 +785,3 @@ while True:
 
     cap.release()
     cv2.destroyAllWindows()
-
-
-
