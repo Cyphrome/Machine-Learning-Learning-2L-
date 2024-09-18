@@ -1,0 +1,23 @@
+import pygame
+import image
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT
+
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
+
+pygame.display.set_caption("Game")
+SCREEN = pygame.display.set_mode((1280, 720), 0, 32)
+
+background = image.load("Assets/background.jpg", size=(SCREEN_WIDTH, SCREEN_HEIGHT), convert="default")
+
+from mosquito import *
+
+mosquito1 = Mosquito()
+
+while True:
+    # Game evolves
+
+    image.draw(SCREEN, background, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), pos_mode="center")
+    image.draw(SCREEN, mosquito1.images[0], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), pos_mode="center")
+
+    pygame.display.update()
