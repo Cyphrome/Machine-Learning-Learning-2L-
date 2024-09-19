@@ -1,3 +1,5 @@
+# Doesn't freaking work on Mac, close call, move into another project while trying to figure it out
+
 import pygame
 import image
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT
@@ -10,14 +12,29 @@ SCREEN = pygame.display.set_mode((1280, 720), 0, 32)
 
 background = image.load("Assets/background.jpg", size=(SCREEN_WIDTH, SCREEN_HEIGHT), convert="default")
 
-from mosquito import *
+from mosquito import Mosquito
+from bee import Bee
 
 mosquito1 = Mosquito()
+mosquito2 = Mosquito()
+bee1 = Bee
+
 
 while True:
     # Game evolves
 
     image.draw(SCREEN, background, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), pos_mode="center")
-    image.draw(SCREEN, mosquito1.images[0], (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), pos_mode="center")
+    image.draw(SCREEN, mosquito1.images[0], (452, 235), pos_mode="center")
+    image.draw(SCREEN, mosquito2.images[0], (589, 455), pos_mode="center")
+    #image.draw(SCREEN, bee1.images[0], (125, 455), pos_mode="center")
 
     pygame.display.update()
+
+# waint until user quits
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+pygame.quit()
