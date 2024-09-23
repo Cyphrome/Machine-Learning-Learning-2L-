@@ -1,0 +1,24 @@
+import cv2
+import numpy as np
+from neural_network_p1 import *
+from neural_network_p2 import *
+
+# Image load...
+vertical = cv2.imread("images/vertical.png", cv2.IMREAD_GRAYSCALE)
+horizontal = cv2.imread("images/horizontal.png", cv2.IMREAD_GRAYSCALE)
+
+# Image Preparation
+vertical = vertical / 255
+horizontal = horizontal / 255
+
+vertical_flattened = vertical.flatten()
+horizontal_flattened = horizontal.flatten()
+
+
+#cv2.imshow("Vertical image", cv2.resize(vertical, (500, 500), interpolation=0))
+cv2.imshow("Vertical flattened", cv2.resize(vertical_flattened, (100, 900), interpolation=0))
+
+#cv2.imshow("Horizontal image", cv2.resize(horizontal, (500, 500), interpolation=0))
+cv2.imshow("Horizontal flattened", cv2.resize(horizontal_flattened, (100, 900), interpolation=0))
+
+cv2.waitKey(1)
